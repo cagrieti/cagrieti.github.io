@@ -6,14 +6,6 @@ title: "Projects"
 # Projects
 
 🚧 This page is under construction. Come back soon!
----
-layout: default
-title: "Projects"
----
-
-# Projects
-
-🚧 This page is under construction. Come back soon!
 
 {% comment %}
 Here are some of my projects:
