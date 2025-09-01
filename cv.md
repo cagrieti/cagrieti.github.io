@@ -9,7 +9,7 @@ title: "CV"
 
 
 ## Education
-- MSc Quantum Science and Technology, TUM, 2024- Present
+- MSc Quantum Science and Technology, TUM, 2024 - Present
 - BSc Mechanical Engineering, METU, 2021 - DNF
 - BSc Physics, METU, 2018 - 2024
 
