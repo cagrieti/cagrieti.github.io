@@ -1,6 +1,7 @@
 ---
 layout: default
 title: "Homepage"
+description: "A personal website to showcase my projects, introduce myself and let people contact me more orderly than social media."
 ---
 
 # Welcome 👋
