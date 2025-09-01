@@ -5,7 +5,7 @@ title: "Home"
 
 # Welcome 👋
 
-Hi, I’m **Your Name**, a Physics MSc student at [Your University].  
+Hi, I’m **Cagri Eti**, a Quantum Science and Technology MSc student at Technical University of Munich (TUM).  
 This is my personal website where I share notes, projects, and my CV.
 
 ## Quick Links
