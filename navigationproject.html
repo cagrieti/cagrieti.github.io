@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fastest Store Finder</title>
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet JS for the interactive map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- A simple custom style for the map container -->
+    <style>
+        #map {
+            height: 400px;
+            border-radius: 0.5rem;
+        }
+        /* Simple loader animation */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            
+            <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">Fastest Store Finder</h1>
+            <p class="text-center text-gray-500 mb-6">Enter store locations (one per line) and find the quickest one to get to!</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column: Inputs -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="stores" class="block text-sm font-medium text-gray-700 mb-1">Store Addresses</label>
+                        <textarea id="stores" rows="5" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Example: Marienplatz, Munich, Germany&#10;Odeonsplatz, Munich, Germany&#10;Stachus, Munich, Germany"></textarea>
+                    </div>
+                    <div>
+                        <label for="transport" class="block text-sm font-medium text-gray-700 mb-1">Transportation Method</label>
+                        <select id="transport" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="driving-car" selected>Driving</option>
+                            <option value="foot-walking">Walking</option>
+                            <option value="cycling-road">Cycling</option>
+                        </select>
+                    </div>
+                    <button id="findBtn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition duration-300 shadow-md">Find Fastest Store</button>
+                </div>
+
+                <!-- Right Column: Map and Results -->
+                <div class="space-y-4">
+                    <div id="map"></div>
+                    <div id="results" class="bg-gray-100 p-4 rounded-md min-h-[60px] flex items-center justify-center text-center">
+                        <p class="text-gray-500">Results will be shown here.</p>
+                    </div>
+                    <div id="loader-container" class="hidden items-center justify-center py-4">
+                        <div class="loader"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <p class="text-center text-xs text-gray-400 mt-4">Powered by Leaflet and OpenRouteService</p>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // IMPORTANT: Replace with your actual API key from https://openrouteservice.org/
+        const apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg4NjY2ZTc2NTdmODQyZTViM2YzNzk1MGE3OWM0NjM0IiwiaCI6Im11cm11cjY0In0=';
+
+        // --- DOM ELEMENTS ---
+        const findBtn = document.getElementById('findBtn');
+        const storesTextarea = document.getElementById('stores');
+        const transportSelect = document.getElementById('transport');
+        const resultsDiv = document.getElementById('results');
+        const mapDiv = document.getElementById('map');
+        const loader = document.getElementById('loader-container');
+
+        // --- MAP INITIALIZATION ---
+        // Initialize map centered on a default location (e.g., Central Europe)
+        let map = L.map(mapDiv).setView([48.1351, 11.5820], 12);
+        let userMarker = null;
+        let routeLayer = null;
+        let storeMarkers = [];
+
+        // Add a tile layer from OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+
+        // --- CORE LOGIC ---
+        findBtn.addEventListener('click', findFastestStore);
+
+        async function findFastestStore() {
+            // 1. Reset UI
+            resultsDiv.innerHTML = '<p class="text-gray-500">Getting your location and calculating routes...</p>';
+            loader.style.display = 'flex';
+            findBtn.disabled = true;
+            findBtn.classList.add('bg-indigo-400', 'cursor-not-allowed');
+            clearMap();
+
+            try {
+                // 2. Get User's Location
+                const userCoords = await getUserLocation();
+                userMarker = L.marker([userCoords.latitude, userCoords.longitude]).addTo(map)
+                    .bindPopup('Your Location')
+                    .openPopup();
+                map.setView([userCoords.latitude, userCoords.longitude], 13);
+
+                // 3. Get Store Addresses
+                const storeAddresses = storesTextarea.value.trim().split('\n').filter(addr => addr.length > 0);
+                if (storeAddresses.length === 0) {
+                    throw new Error("Please enter at least one store address.");
+                }
+
+                const transportMode = transportSelect.value;
+                const userPoint = [userCoords.longitude, userCoords.latitude]; // API needs [lng, lat]
+
+                // 4. Fetch routes for all stores
+                const promises = storeAddresses.map(address => getRoute(userPoint, address, transportMode));
+                const results = await Promise.all(promises);
+                
+                // Filter out any failed requests
+                const validResults = results.filter(r => r !== null);
+                if (validResults.length === 0) {
+                    throw new Error("Could not find routes to any of the specified locations. Check the addresses.");
+                }
+
+                // 5. Find the fastest one
+                const fastest = validResults.reduce((prev, current) => (prev.duration < current.duration) ? prev : current);
+
+                // 6. Display results
+                displayWinner(fastest);
+                drawWinnerRoute(fastest);
+                markStores(validResults, fastest.address);
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="text-red-500 font-semibold">${error.message}</p>`;
+            } finally {
+                // 7. Re-enable button and hide loader
+                loader.style.display = 'none';
+                findBtn.disabled = false;
+                findBtn.classList.remove('bg-indigo-400', 'cursor-not-allowed');
+            }
+        }
+
+        function getUserLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error("Geolocation is not supported by your browser."));
+                } else {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => resolve(position.coords),
+                        () => reject(new Error("Unable to retrieve your location. Please allow location access."))
+                    );
+                }
+            });
+        }
+
+        async function getRoute(startPoint, endAddress, transportMode) {
+            // The API requires a POST request with the coordinates and parameters in the body.
+            const url = `https://api.openrouteservice.org/v2/directions/${transportMode}/geojson`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': apiKey,
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+                    },
+                    body: JSON.stringify({
+                        "coordinates": [startPoint], // Your location
+                        "instructions": false, // We don't need turn-by-turn instructions
+                        "alternative_routes": null, // We only want the best route
+                        "preference": "fastest",
+                        "options": {"avoid_features": ["ferries"]},
+                        "geometry_simplify": "true",
+                         // The magic part that finds the address for us
+                        "locations": [
+                            {"location": startPoint}, // your coords
+                            {"location": endAddress} // store address string
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                     console.error(`Error for address "${endAddress}":`, await response.json());
+                     return null; // Return null for failed requests
+                }
+
+                const data = await response.json();
+                const route = data.features[0];
+                const summary = route.properties.summary;
+                const endCoords = route.geometry.coordinates[route.geometry.coordinates.length - 1]; // [lng, lat]
+                
+                return {
+                    address: endAddress,
+                    duration: summary.duration, // in seconds
+                    distance: summary.distance, // in meters
+                    geometry: route.geometry,
+                    endCoords: [endCoords[1], endCoords[0]] // convert to [lat, lng] for leaflet
+                };
+
+            } catch (error) {
+                console.error(`Network or API error for address "${endAddress}":`, error);
+                return null;
+            }
+        }
+
+        function displayWinner(fastest) {
+            const minutes = Math.round(fastest.duration / 60);
+            resultsDiv.innerHTML = `
+                <div class="text-left">
+                    <p class="font-bold text-lg text-indigo-700">Fastest Store Found!</p>
+                    <p class="text-gray-800"><span class="font-semibold">Location:</span> ${fastest.address}</p>
+                    <p class="text-gray-800"><span class="font-semibold">Travel Time:</span> ~${minutes} minutes</p>
+                </div>
+            `;
+        }
+        
+        function drawWinnerRoute(fastest) {
+            routeLayer = L.geoJSON(fastest.geometry, {
+                style: {
+                    color: '#4f46e5', // Indigo
+                    weight: 5,
+                    opacity: 0.8
+                }
+            }).addTo(map);
+            map.fitBounds(routeLayer.getBounds().pad(0.1)); // Zoom map to fit the route
+        }
+
+        function markStores(results, winnerAddress) {
+            results.forEach(result => {
+                const isWinner = result.address === winnerAddress;
+                const marker = L.marker(result.endCoords, {
+                    icon: L.divIcon({
+                        html: `<span style="font-size: 2rem; color: ${isWinner ? '#4f46e5' : '#6b7280'};">📍</span>`,
+                        className: '',
+                        iconSize: [30, 42],
+                        iconAnchor: [15, 42]
+                    })
+                }).addTo(map);
+                marker.bindPopup(`${result.address}<br>~${Math.round(result.duration / 60)} mins`);
+                storeMarkers.push(marker);
+            });
+        }
+
+        function clearMap() {
+            if (userMarker) map.removeLayer(userMarker);
+            if (routeLayer) map.removeLayer(routeLayer);
+            storeMarkers.forEach(marker => map.removeLayer(marker));
+            userMarker = null;
+            routeLayer = null;
+            storeMarkers = [];
+        }
+
+    </script>
+</body>
+</html>
