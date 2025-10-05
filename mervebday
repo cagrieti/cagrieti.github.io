@@ -1,0 +1,25 @@
+---
+layout: none
+title: "Doğum Günün Kutlu Olsun Merve"
+permalink: /merve-birthday/
+---
+
+<style>
+  body {
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 5rem;
+    text-align: center;
+    color: black;
+    font-family: "Arial", sans-serif;
+  }
+</style>
+
+<h1>🎉🎂🎈<br>DOĞUM GÜNÜN KUTLU OLSUN MERVE!<br>🎈🎂🎉</h1>
