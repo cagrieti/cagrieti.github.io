@@ -6,6 +6,7 @@
     body { font-family: Arial; padding: 20px; }
     input, select, button { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; }
     #results { margin-top: 20px; }
+    .store-input { margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -15,8 +16,12 @@
 <label>Your Location:</label>
 <input id="locationInput" placeholder="Your current location will be auto-filled" disabled>
 
-<label>Destination Stores:</label>
-<input id="storeInput" placeholder="Type store/street name">
+<div id="storesContainer">
+  <div class="store-input">
+    <input class="storeInput" placeholder="Type store/street name">
+  </div>
+</div>
+<button id="addStoreBtn">Add Another Store</button>
 
 <label>Transportation Method:</label>
 <select id="mode">
@@ -32,13 +37,30 @@
 <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
 <script>
 let myLocation = null;
-let autocomplete;
+let autocompletes = [];
 
+// Initialize autocomplete for all store inputs
 function initAutocomplete() {
-  const storeInput = document.getElementById('storeInput');
-  autocomplete = new google.maps.places.Autocomplete(storeInput);
-  autocomplete.setFields(['geometry', 'name']);
+  document.querySelectorAll('.storeInput').forEach(input => {
+    const autocomplete = new google.maps.places.Autocomplete(input);
+    autocomplete.setFields(['geometry', 'name']);
+    autocompletes.push(autocomplete);
+  });
 }
+
+// Add new store input
+document.getElementById('addStoreBtn').addEventListener('click', () => {
+  const container = document.getElementById('storesContainer');
+  const div = document.createElement('div');
+  div.className = 'store-input';
+  div.innerHTML = `<input class="storeInput" placeholder="Type store/street name">`;
+  container.appendChild(div);
+  // Initialize autocomplete for the new input
+  const newInput = div.querySelector('.storeInput');
+  const autocomplete = new google.maps.places.Autocomplete(newInput);
+  autocomplete.setFields(['geometry', 'name']);
+  autocompletes.push(autocomplete);
+});
 
 // Get user's current location
 if (navigator.geolocation) {
@@ -54,9 +76,24 @@ if (navigator.geolocation) {
 
 // Calculate travel time
 document.getElementById('calculateBtn').addEventListener('click', () => {
-  const destinationPlace = autocomplete.getPlace();
-  if (!destinationPlace || !destinationPlace.geometry) {
-    alert('Please select a valid store from the dropdown.');
+  if (!myLocation) {
+    alert('Waiting for your location...');
+    return;
+  }
+
+  const destinations = [];
+  const storeNames = [];
+
+  autocompletes.forEach(ac => {
+    const place = ac.getPlace();
+    if (place && place.geometry) {
+      destinations.push(place.geometry.location);
+      storeNames.push(place.name);
+    }
+  });
+
+  if (destinations.length === 0) {
+    alert('Please select at least one valid store.');
     return;
   }
 
@@ -65,21 +102,28 @@ document.getElementById('calculateBtn').addEventListener('click', () => {
   const service = new google.maps.DistanceMatrixService();
   service.getDistanceMatrix({
     origins: [myLocation],
-    destinations: [destinationPlace.geometry.location],
+    destinations: destinations,
     travelMode: mode.toUpperCase(),
   }, (response, status) => {
     if (status !== 'OK') {
-      alert('Error calculating distance: ' + status);
-    } else {
-      const result = response.rows[0].elements[0];
-      const output = `
-        <h2>Result:</h2>
-        <p>Destination: ${destinationPlace.name}</p>
-        <p>Distance: ${result.distance.text}</p>
-        <p>Estimated Time: ${result.duration.text}</p>
-      `;
-      document.getElementById('results').innerHTML = output;
+      alert('Error calculating distances: ' + status);
+      return;
     }
+
+    const results = response.rows[0].elements;
+    let output = '<h2>Results:</h2><ul>';
+    let fastestIndex = 0;
+    let minTime = results[0].duration.value;
+
+    results.forEach((res, i) => {
+      output += `<li>${storeNames[i]}: ${res.distance.text}, ${res.duration.text}</li>`;
+      if (res.duration.value < minTime) {
+        minTime = res.duration.value;
+        fastestIndex = i;
+      }
+    });
+    output += `</ul><h3>Fastest Store: ${storeNames[fastestIndex]}</h3>`;
+    document.getElementById('results').innerHTML = output;
   });
 });
 
