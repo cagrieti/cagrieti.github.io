@@ -5,7 +5,8 @@ title: "Projects"
 
 # Projects
 
-🚧 This page is under construction. Come back soon!
+## Closer Location Comparator (best name I could come up with)
+- [Navigation Project](https://cagrieti.github.io/navigationproject.html)
 
 {% comment %}
 Here are some of my projects:
