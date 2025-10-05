@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Fastest Store Finder</title>
+  <title>Fastest Store Finder (Free)</title>
+  <meta charset="utf-8" />
   <style>
     body { font-family: Arial; padding: 20px; }
     input, select, button { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; }
+    #map { height: 400px; margin-top: 20px; }
     #results { margin-top: 20px; }
     .store-input { margin-bottom: 10px; }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 
-<h1>Find the Fastest Store</h1>
+<h1>Fastest Store Finder (Free)</h1>
 
 <label>Your Location:</label>
-<input id="locationInput" placeholder="Your current location will be auto-filled" disabled>
+<input id="locationInput" placeholder="Your current location will appear here" disabled>
 
 <div id="storesContainer">
   <div class="store-input">
@@ -25,109 +28,111 @@
 
 <label>Transportation Method:</label>
 <select id="mode">
-  <option value="driving">Driving</option>
-  <option value="walking">Walking</option>
+  <option value="driving-car">Driving</option>
+  <option value="foot-walking">Walking</option>
 </select>
 
 <button id="calculateBtn">Calculate Fastest</button>
 
 <div id="results"></div>
+<div id="map"></div>
 
-<!-- Load Google Maps JS API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+const ORS_API_KEY = 'YOUR_ORS_API_KEY';
 let myLocation = null;
-let autocompletes = [];
+let map = L.map('map').setView([48.1351, 11.5820], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+let storeMarkers = [];
 
-// Initialize autocomplete for all store inputs
-function initAutocomplete() {
-  document.querySelectorAll('.storeInput').forEach(input => {
-    const autocomplete = new google.maps.places.Autocomplete(input);
-    autocomplete.setFields(['geometry', 'name']);
-    autocompletes.push(autocomplete);
-  });
-}
-
-// Add new store input
-document.getElementById('addStoreBtn').addEventListener('click', () => {
+function addStoreInput() {
   const container = document.getElementById('storesContainer');
   const div = document.createElement('div');
   div.className = 'store-input';
   div.innerHTML = `<input class="storeInput" placeholder="Type store/street name">`;
   container.appendChild(div);
-  // Initialize autocomplete for the new input
-  const newInput = div.querySelector('.storeInput');
-  const autocomplete = new google.maps.places.Autocomplete(newInput);
-  autocomplete.setFields(['geometry', 'name']);
-  autocompletes.push(autocomplete);
-});
+}
+document.getElementById('addStoreBtn').addEventListener('click', addStoreInput);
 
-// Get user's current location
+// Get user location
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition((position) => {
-    myLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-    document.getElementById('locationInput').value = `${position.coords.latitude}, ${position.coords.longitude}`;
-  }, () => {
-    alert('Geolocation permission denied.');
-  });
+    myLocation = [position.coords.latitude, position.coords.longitude];
+    document.getElementById('locationInput').value = `${myLocation[0]}, ${myLocation[1]}`;
+    L.marker(myLocation).addTo(map).bindPopup('You are here').openPopup();
+    map.setView(myLocation, 13);
+  }, () => alert('Geolocation permission denied.'));
 } else {
-  alert('Geolocation not supported by this browser.');
+  alert('Geolocation not supported.');
 }
 
-// Calculate travel time
-document.getElementById('calculateBtn').addEventListener('click', () => {
-  if (!myLocation) {
-    alert('Waiting for your location...');
-    return;
-  }
+// Photon geocoding
+async function geocode(query) {
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.features.length > 0) {
+    return data.features[0].geometry.coordinates.reverse(); // [lat, lon]
+  } else return null;
+}
 
-  const destinations = [];
-  const storeNames = [];
-
-  autocompletes.forEach(ac => {
-    const place = ac.getPlace();
-    if (place && place.geometry) {
-      destinations.push(place.geometry.location);
-      storeNames.push(place.name);
-    }
+// Calculate travel times using ORS Matrix API
+async function calculateTimes(destinations, mode) {
+  const locations = [myLocation, ...destinations];
+  const body = { locations: locations.map(l => [l[1], l[0]]), metrics: ['duration'] };
+  const res = await fetch(`https://api.openrouteservice.org/v2/matrix/${mode}`, {
+    method: 'POST',
+    headers: { 'Authorization': ORS_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
+  return res.json();
+}
 
-  if (destinations.length === 0) {
-    alert('Please select at least one valid store.');
-    return;
+document.getElementById('calculateBtn').addEventListener('click', async () => {
+  if (!myLocation) { alert('Waiting for your location'); return; }
+
+  const inputs = document.querySelectorAll('.storeInput');
+  let destinations = [];
+  let storeNames = [];
+
+  // Geocode all stores
+  for (let input of inputs) {
+    if (input.value.trim() !== '') {
+      const coords = await geocode(input.value.trim());
+      if (coords) {
+        destinations.push(coords);
+        storeNames.push(input.value.trim());
+      }
+    }
   }
+
+  if (destinations.length === 0) { alert('No valid stores'); return; }
+
+  // Clear old markers
+  storeMarkers.forEach(m => map.removeLayer(m));
+  storeMarkers = [];
+  destinations.forEach((dest, i) => {
+    const marker = L.marker(dest).addTo(map).bindPopup(storeNames[i]);
+    storeMarkers.push(marker);
+  });
 
   const mode = document.getElementById('mode').value;
+  const matrix = await calculateTimes(destinations, mode);
 
-  const service = new google.maps.DistanceMatrixService();
-  service.getDistanceMatrix({
-    origins: [myLocation],
-    destinations: destinations,
-    travelMode: mode.toUpperCase(),
-  }, (response, status) => {
-    if (status !== 'OK') {
-      alert('Error calculating distances: ' + status);
-      return;
-    }
+  let resultsHtml = '<h2>Results:</h2><ul>';
+  let minTime = matrix.durations[0][1];
+  let fastestIndex = 0;
 
-    const results = response.rows[0].elements;
-    let output = '<h2>Results:</h2><ul>';
-    let fastestIndex = 0;
-    let minTime = results[0].duration.value;
+  for (let i = 0; i < destinations.length; i++) {
+    const durationSec = matrix.durations[0][i+1];
+    resultsHtml += `<li>${storeNames[i]}: ${Math.round(durationSec/60)} min</li>`;
+    if (durationSec < minTime) { minTime = durationSec; fastestIndex = i; }
+  }
+  resultsHtml += `</ul><h3>Fastest Store: ${storeNames[fastestIndex]}</h3>`;
+  document.getElementById('results').innerHTML = resultsHtml;
 
-    results.forEach((res, i) => {
-      output += `<li>${storeNames[i]}: ${res.distance.text}, ${res.duration.text}</li>`;
-      if (res.duration.value < minTime) {
-        minTime = res.duration.value;
-        fastestIndex = i;
-      }
-    });
-    output += `</ul><h3>Fastest Store: ${storeNames[fastestIndex]}</h3>`;
-    document.getElementById('results').innerHTML = output;
-  });
+  map.fitBounds([myLocation, ...destinations]);
 });
-
-window.onload = initAutocomplete;
 </script>
 
 </body>
