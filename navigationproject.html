@@ -139,45 +139,6 @@ document.getElementById('calculateBtn').addEventListener('click', async () => {
 
   if (destinations.length === 0) { alert('No valid location selected'); return; }
 
-  // Clear old markers
-  storeMarkers.forEach(m => map.removeLayer(m));
-  storeMarkers = [];
-  destinations.forEach((dest, i) => {
-    const marker = L.marker(dest).addTo(map).bindPopup(storeNames[i]);
-    storeMarkers.push(marker);
-  });
-
-  const mode = document.getElementById('mode').value;
-  const matrix = await calculateTimes(destinations, mode);
-
-  let resultsHtml = '<h2>Results:</h2><ul>';
-  let minTime = matrix.durations[0][1];
-  let fastestIndex = 0;
-
-  for (let i = 0; i < destinations.length; i++) {
-    const durationSec = matrix.durations[0][i+1];
-    resultsHtml += `<li>${storeNames[i]}: ${Math.round(durationSec/60)} min</li>`;
-    if (durationSec < minTime) { minTime = durationSec; fastestIndex = i; }
-  }
-  resultsHtml += `</ul><h3>Fastest Store: ${storeNames[fastestIndex]}</h3>`;
-  document.getElementById('results').innerHTML = resultsHtml;
-
-  map.fitBounds([myLocation, ...destinations]);
-
-   // Add markers (highlight fastest)
-  destinations.forEach((dest, i) => {
-    const color = i === fastestIndex ? 'green' : 'blue';
-    const marker = L.circleMarker(dest, {
-      radius: i === fastestIndex ? 10 : 6,
-      color: color,
-      fillColor: color,
-      fillOpacity: 0.8
-    }).addTo(map).bindPopup(storeNames[i]);
-    storeMarkers.push(marker);
-  });
-
-  // Draw route to fastest store
-  await drawRoute(destinations[fastestIndex], mode);
 });
 </script>
 
