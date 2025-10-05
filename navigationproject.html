@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title></title>
+  <title>Location Checker</title>
   <meta charset="utf-8" />
   <style>
     body { font-family: Arial; padding: 20px; }
     input, select, button { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; }
     #map { height: 400px; margin-top: 20px; }
     #results { margin-top: 20px; }
-    .store-input { margin-bottom: 10px; }
+    .store-input { margin-bottom: 10px; position: relative; }
+    .suggestions { 
+      border: 1px solid #ccc; background: #fff; position: absolute; top: 100%; left: 0; right: 0; max-height: 150px; overflow-y: auto; z-index: 10; 
+    }
+    .suggestion-item { padding: 5px; cursor: pointer; }
+    .suggestion-item:hover { background: #eee; }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 
-<h1>Location Finder (kind of)</h1>
+<h1>Which is closer?</h1>
 
 <label>Your Location:</label>
 <input id="locationInput" placeholder="Your current location will appear here" disabled>
@@ -22,6 +27,7 @@
 <div id="storesContainer">
   <div class="store-input">
     <input class="storeInput" placeholder="Type store/street name">
+    <div class="suggestions"></div>
   </div>
 </div>
 <button id="addStoreBtn">Add Another Location</button>
@@ -32,7 +38,7 @@
   <option value="foot-walking">Walking</option>
 </select>
 
-<button id="calculateBtn">Calculate Fastest</button>
+<button id="calculateBtn">Calculate Closest</button>
 
 <div id="results"></div>
 <div id="map"></div>
@@ -45,12 +51,14 @@ let map = L.map('map').setView([48.1351, 11.5820], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 let storeMarkers = [];
 
+// Helper: create a new store input with autocomplete
 function addStoreInput() {
   const container = document.getElementById('storesContainer');
   const div = document.createElement('div');
   div.className = 'store-input';
-  div.innerHTML = `<input class="storeInput" placeholder="Type store/street name">`;
+  div.innerHTML = `<input class="storeInput" placeholder="Type store/street name"><div class="suggestions"></div>`;
   container.appendChild(div);
+  attachAutocomplete(div.querySelector('.storeInput'));
 }
 document.getElementById('addStoreBtn').addEventListener('click', addStoreInput);
 
@@ -66,15 +74,41 @@ if (navigator.geolocation) {
   alert('Geolocation not supported.');
 }
 
-// Photon geocoding
-async function geocode(query) {
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`;
-  const res = await fetch(url);
+// Photon autocomplete
+async function searchPhoton(query) {
+  const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
   const data = await res.json();
-  if (data.features.length > 0) {
-    return data.features[0].geometry.coordinates.reverse(); // [lat, lon]
-  } else return null;
+  return data.features.map(f => ({
+    name: f.properties.name + (f.properties.city ? ', ' + f.properties.city : ''),
+    coords: f.geometry.coordinates.reverse() // [lat, lon]
+  }));
 }
+
+// Attach autocomplete to input
+function attachAutocomplete(input) {
+  const suggestionsDiv = input.nextElementSibling;
+  input.addEventListener('input', async () => {
+    const val = input.value;
+    suggestionsDiv.innerHTML = '';
+    if (val.length < 2) return;
+    const results = await searchPhoton(val);
+    results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'suggestion-item';
+      div.textContent = r.name;
+      div.addEventListener('click', () => {
+        input.value = r.name;
+        input.dataset.lat = r.coords[0];
+        input.dataset.lon = r.coords[1];
+        suggestionsDiv.innerHTML = '';
+      });
+      suggestionsDiv.appendChild(div);
+    });
+  });
+}
+
+// Attach autocomplete to initial input
+attachAutocomplete(document.querySelector('.storeInput'));
 
 // Calculate travel times using ORS Matrix API
 async function calculateTimes(destinations, mode) {
@@ -95,18 +129,15 @@ document.getElementById('calculateBtn').addEventListener('click', async () => {
   let destinations = [];
   let storeNames = [];
 
-  // Geocode all stores
-  for (let input of inputs) {
-    if (input.value.trim() !== '') {
-      const coords = await geocode(input.value.trim());
-      if (coords) {
-        destinations.push(coords);
-        storeNames.push(input.value.trim());
-      }
+  // Collect destinations from inputs (using selected coordinates)
+  inputs.forEach(input => {
+    if (input.dataset.lat && input.dataset.lon) {
+      destinations.push([parseFloat(input.dataset.lat), parseFloat(input.dataset.lon)]);
+      storeNames.push(input.value);
     }
-  }
+  });
 
-  if (destinations.length === 0) { alert('No valid stores'); return; }
+  if (destinations.length === 0) { alert('No valid location selected'); return; }
 
   // Clear old markers
   storeMarkers.forEach(m => map.removeLayer(m));
