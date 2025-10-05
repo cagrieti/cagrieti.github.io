@@ -1,25 +1,75 @@
 ---
-layout: none
+layout: null
 title: "Doğum Günün Kutlu Olsun Merve"
 permalink: /merve-birthday/
 ---
 
-<style>
-  body {
-    background-color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Doğum Günün Kutlu Olsun Merve</title>
 
-  h1 {
-    font-size: 5rem;
-    text-align: center;
-    color: black;
-    font-family: "Arial", sans-serif;
-  }
-</style>
+  <style>
+    /* Force a plain white page even if theme injects styles */
+    html, body {
+      height: 100%;
+      margin: 0 !important;
+      background: #ffffff !important;
+      color: #000 !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-<h1>🎉🎂🎈<br>DOĞUM GÜNÜN KUTLU OLSUN MERVE!<br>🎈🎂🎉</h1>
+    .wrap {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      line-height: 1;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 900;
+      /* responsive huge size */
+      font-size: clamp(3rem, 10vw + 2rem, 9.5rem);
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .emoji {
+      display: inline-block;
+      vertical-align: middle;
+      /* keep emojis large but responsive */
+      font-size: clamp(2rem, 8vw, 4rem);
+      margin: 0 .6rem;
+      line-height: 1;
+    }
+
+    /* gentle pop animation (respects reduced-motion) */
+    @media (prefers-reduced-motion: no-preference) {
+      h1 { animation: pop 1.6s cubic-bezier(.2,.9,.2,1); }
+      @keyframes pop {
+        0%   { transform: scale(.85); opacity: 0; }
+        60%  { transform: scale(1.03); opacity: 1; }
+        100% { transform: scale(1); }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap" role="main" aria-labelledby="greeting">
+    <h1 id="greeting">
+      <span class="emoji" aria-hidden="true">🎉</span>
+      DOĞUM GÜNÜN KUTLU OLSUN MERVE
+      <span class="emoji" aria-hidden="true">🎂</span>
+    </h1>
+  </main>
+</body>
+</html>
