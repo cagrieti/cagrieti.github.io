@@ -183,17 +183,17 @@
                         'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
                     },
                     body: JSON.stringify({
-                        "coordinates": [startPoint], // Your location
-                        "instructions": false, // We don't need turn-by-turn instructions
-                        "alternative_routes": null, // We only want the best route
+                        // The "locations" array should contain the start and end points directly.
+                        // The top-level "coordinates" key was removed as it conflicts with this method.
+                        "locations": [
+                            startPoint, // your coords [lng, lat]
+                            endAddress  // store address string
+                        ],
+                        "instructions": false,
+                        "alternative_routes": null,
                         "preference": "fastest",
                         "options": {"avoid_features": ["ferries"]},
-                        "geometry_simplify": "true",
-                         // The magic part that finds the address for us
-                        "locations": [
-                            {"location": startPoint}, // your coords
-                            {"location": endAddress} // store address string
-                        ]
+                        "geometry_simplify": "true"
                     })
                 });
 
@@ -271,3 +271,4 @@
     </script>
 </body>
 </html>
+
