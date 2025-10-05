@@ -8,7 +8,7 @@ title: "Notes"
 Here I share selected notes and lab reports from my BSc and MSc courses.
 
 ## Applications of QC:
-- [Amplitude Amplification Quantum Circuit via Quirk](AmplitudeAmplificationExample.html)
+- [Amplitude Amplification Quantum Circuit via Quirk](amplitudeamplification.html)
 
 *Probably not yet accesible*
 - [Quantum Mechanics Notes (PDF)](files/quantum_notes.pdf)
