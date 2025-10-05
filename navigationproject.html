@@ -163,6 +163,21 @@ document.getElementById('calculateBtn').addEventListener('click', async () => {
   document.getElementById('results').innerHTML = resultsHtml;
 
   map.fitBounds([myLocation, ...destinations]);
+
+   // Add markers (highlight fastest)
+  destinations.forEach((dest, i) => {
+    const color = i === fastestIndex ? 'green' : 'blue';
+    const marker = L.circleMarker(dest, {
+      radius: i === fastestIndex ? 10 : 6,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.8
+    }).addTo(map).bindPopup(storeNames[i]);
+    storeMarkers.push(marker);
+  });
+
+  // Draw route to fastest store
+  await drawRoute(destinations[fastestIndex], mode);
 });
 </script>
 
