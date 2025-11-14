@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Munich 10-Day Weather Forecast</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 650px; margin: auto; padding: 20px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+th { background: #f0f0f0; }
+</style>
+</head>
+<body>
+
+<h1>10-Day Weather Forecast — Munich</h1>
+<p>Updated every 6 hours automatically using <a href="https://open-meteo.com">Open-Meteo</a>.</p>
+
+<div id="forecast">
+Loading latest forecast…
+</div>
+
+<script>
+// Fetch and render forecast
+async function loadForecast() {
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FBerlin&forecast_days=10";
+    const res = await fetch(url);
+    const data = await res.json();
+    const daily = data.daily;
+
+    const emoji = wc => {
+        if (wc === 0) return "☀️";
+        if ([1,2,3].includes(wc)) return "☁️";
+        if ([45,48].includes(wc)) return "🌫️";
+        if ([51,53,55,61,63,65,80,81,82].includes(wc)) return "🌧️";
+        if ([71,73,75,85,86].includes(wc)) return "❄️";
+        if ([95,96,99].includes(wc)) return "⛈️";
+        return "🌦️";
+    };
+
+    let html = "<table><tr><th>Day</th><th>Weather</th><th>High/Low (°C)</th><th>Rain %</th></tr>";
+
+    for (let i=0; i<daily.time.length; i++) {
+        const d = new Date(daily.time[i]);
+        const day = d.toLocaleDateString("en-US", { weekday: "short", month:"short", day:"numeric" });
+
+        html += `<tr>
+            <td><strong>${day}</strong></td>
+            <td>${emoji(daily.weathercode[i])}</td>
+            <td>${daily.temperature_2m_max[i]}° / ${daily.temperature_2m_min[i]}°</td>
+            <td>${daily.precipitation_probability_max[i]}%</td>
+        </tr>`;
+    }
+
+    html += "</table>";
+    document.getElementById("forecast").innerHTML = html;
+}
+
+loadForecast();
+</script>
+
+</body>
+</html>
