@@ -8,6 +8,9 @@ title: "Projects"
 ## Closer Location Comparator (best name I could come up with)
 - [Navigation Project](https://cagrieti.github.io/navigationproject.html)
 
+## Other Projects
+- [Weathehr Forecast for Munich](https://cagrieti.github.io/MUNICH_WEATHER.md)
+
 {% comment %}
 Here are some of my projects:
 
@@ -19,7 +22,6 @@ I built an Arduino-based system to measure room luminosity throughout the day.
 ## Other Projects
 - [Interactive Physics Simulation](https://yourgithubusername.github.io/simulation-project/)
 - [Neal.fun-style mini project](https://yourgithubusername.github.io/fun-project/)
-- [Weathehr Forecast for Munich](https://cagrieti.github.io/MUNICH_WEATHER.md)
 {% endcomment %}
 
 [Back to Home](index.md)
