@@ -7,8 +7,8 @@ LATITUDE = 48.14
 LONGITUDE = 11.58
 # THIS IS THE ONLY LINE THAT CHANGED
 TARGET_FILE = "MUNICH_WEATHER.md" 
-START_COMMENT = ""
-END_COMMENT = ""
+START_COMMENT = "<!-- START -->"
+END_COMMENT = "<!-- END -->"
 
 def get_weather_emoji(weather_code):
     """
