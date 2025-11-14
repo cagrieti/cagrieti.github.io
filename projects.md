@@ -9,7 +9,7 @@ title: "Projects"
 - [Navigation Project](https://cagrieti.github.io/navigationproject.html)
 
 ## Other Projects
-- [Weather Forecast for Munich](https://cagrieti.github.io/MUNICH_WEATHER.md)
+- [Weather Forecast for Munich](https://cagrieti.github.io/MUNICH_WEATHER.html)
 
 {% comment %}
 Here are some of my projects:
