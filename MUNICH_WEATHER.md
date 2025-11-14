@@ -9,3 +9,6 @@ This page provides a 10-day weather forecast for the greater Munich area, powere
 ---
 
 ### 🌤️ The Forecast
+
+<!-- START -->
+<!-- END -->
