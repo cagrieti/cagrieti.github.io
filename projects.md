@@ -19,6 +19,7 @@ I built an Arduino-based system to measure room luminosity throughout the day.
 ## Other Projects
 - [Interactive Physics Simulation](https://yourgithubusername.github.io/simulation-project/)
 - [Neal.fun-style mini project](https://yourgithubusername.github.io/fun-project/)
+- [Weathehr Forecast for Munich](https://cagrieti.github.io/MUNICH_WEATHER.md)
 {% endcomment %}
 
 [Back to Home](index.md)
