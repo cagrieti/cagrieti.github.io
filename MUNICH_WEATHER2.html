@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Munich Weather Forecast</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #f9f9f9; }
+h1, h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+.weather-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px; }
+.weather-box p { font-size: 1.2em; margin: 5px 0; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: center; }
+th { background: #f0f0f0; }
+tr:hover { background: #f5f5f5; }
+.hourly-container { max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Munich Weather Forecast</h1>
+<p>Powered by <a href="https://open-meteo.com">Open-Meteo</a>. Page updates live on load.</p>
+
+<h2>Current Weather</h2>
+<div id="current-weather" class="weather-box">
+  Loading current weather…
+</div>
+
+<h2>Hourly Forecast (Next 24 Hours)</h2>
+<div id="hourly-forecast" class="weather-box">
+  Loading hourly forecast…
+</div>
+
+<h2>10-Day Daily Forecast</h2>
+<div id="daily-forecast" class="weather-box">
+  Loading 10-day forecast…
+</div>
+
+<script>
+// --- Weather Code to Emoji Mapping ---
+const emoji = wc => {
+  if (wc === 0) return "☀️";
+  if ([1,2,3].includes(wc)) return "☁️";
+  if ([45,48].includes(wc)) return "🌫️";
+  if ([51,53,55,61,63,65,80,81,82].includes(wc)) return "🌧️";
+  if ([71,73,75,85,86].includes(wc)) return "❄️";
+  if ([95,96,99].includes(wc)) return "⛈️";
+  return "🌦️";
+};
+
+// --- Main Function to Fetch and Render All Data ---
+async function loadForecast() {
+  
+  // This URL fetches current, hourly, AND daily data for 10 days
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FBerlin&forecast_days=10";
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    // --- 1. Render Current Weather ---
+    renderCurrent(data.current);
+    
+    // --- 2. Render Hourly Forecast ---
+    // We get 240 hours, but only show the first 24
+    renderHourly(data.hourly);
+
+    // --- 3. Render Daily Forecast ---
+    renderDaily(data.daily);
+
+  } catch (e) {
+    document.getElementById("current-weather").innerHTML = "Failed to load weather data.";
+    console.error(e);
+  }
+}
+
+// --- Helper function for Current Weather ---
+function renderCurrent(current) {
+  const currentHtml = `
+    <p><strong>Temperature:</strong> ${current.temperature_2m}°C</p>
+    <p><strong>Wind Speed:</strong> ${current.wind_speed_10m} km/h</p>
+  `;
+  document.getElementById("current-weather").innerHTML = currentHtml;
+}
+
+// --- Helper function for Hourly Forecast (Next 24h) ---
+function renderHourly(hourly) {
+  let hourlyHtml = `
+    <div class="hourly-container">
+      <table>
+        <tr>
+          <th>Time</th>
+          <th>Temp (°C)</th>
+          <th>Humidity (%)</th>
+          <th>Wind (km/h)</th>
+        </tr>
+  `;
+  
+  // Loop through only the first 24 hours
+  for (let i = 0; i < 24; i++) {
+    const date = new Date(hourly.time[i]);
+    const timeString = date.toLocaleTimeString("en-GB", { weekday: "short", hour: '2-digit', minute: '2-digit' });
+
+    hourlyHtml += `
+      <tr>
+        <td><strong>${timeString}</strong></td>
+        <td>${hourly.temperature_2m[i]}°</td>
+        <td>${hourly.relative_humidity_2m[i]}%</td>
+        <td>${hourly.wind_speed_10m[i]}</td>
+      </tr>
+    `;
+  }
+  hourlyHtml += "</table></div>";
+  document.getElementById("hourly-forecast").innerHTML = hourlyHtml;
+}
+
+// --- Helper function for 10-Day Daily Forecast ---
+function renderDaily(daily) {
+  let dailyHtml = `
+    <table>
+      <tr>
+        <th>Day</th>
+        <th>Forecast</th>
+        <th>High/Low (°C)</th>
+        <th>Rain %</th>
+      </tr>
+  `;
+
+  for (let i = 0; i < daily.time.length; i++) {
+    const d = new Date(daily.time[i]);
+    const day = d.toLocaleDateString("en-US", { weekday: "short", month:"short", day:"numeric" });
+
+    dailyHtml += `
+      <tr>
+        <td><strong>${day}</strong></td>
+        <td>${emoji(daily.weathercode[i])}</td>
+        <td>${daily.temperature_2m_max[i]}° / ${daily.temperature_2m_min[i]}°</td>
+        <td>${daily.precipitation_probability_max[i]}%</td>
+      </tr>
+    `;
+  }
+  dailyHtml += "</table>";
+  document.getElementById("daily-forecast").innerHTML = dailyHtml;
+}
+
+
+// Run the function when the page loads
+loadForecast();
+</script>
+
+</body>
+</html>
