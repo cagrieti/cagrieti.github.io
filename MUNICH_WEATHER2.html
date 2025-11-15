@@ -13,6 +13,13 @@ th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: center; }
 th { background: #f0f0f0; }
 tr:hover { background: #f5f5f5; }
 .hourly-container { max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+
+/* --- Sticky Header CSS --- */
+.hourly-container th {
+  position: sticky;
+  top: 0;
+  background: #f0f0f0;
+}
 </style>
 </head>
 <body>
@@ -50,25 +57,21 @@ const emoji = wc => {
 // --- Main Function to Fetch and Render All Data ---
 async function loadForecast() {
   
-  // This URL fetches current, hourly, AND daily data for 10 days
-  const url = "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,precipitation_probability_max,wind_speed_10m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FBerlin&forecast_days=10";
+  // *** FIX 1: Changed 'relative_humidity_2m' to 'precipitation_probability' ***
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,wind_speed_10m,weathercode,precipitation_probability&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FBerlin&forecast_days=10";
   
   try {
     const res = await fetch(url);
     const data = await res.json();
     
-    // --- 1. Render Current Weather ---
     renderCurrent(data.current);
-    
-    // --- 2. Render Hourly Forecast ---
-    // We get 240 hours, but only show the first 24
     renderHourly(data.hourly);
-
-    // --- 3. Render Daily Forecast ---
     renderDaily(data.daily);
 
   } catch (e) {
     document.getElementById("current-weather").innerHTML = "Failed to load weather data.";
+    document.getElementById("hourly-forecast").innerHTML = "Failed to load weather data.";
+    document.getElementById("daily-forecast").innerHTML = "Failed to load weather data.";
     console.error(e);
   }
 }
@@ -91,12 +94,12 @@ function renderHourly(hourly) {
           <th>Time</th>
           <th>Temp (°C)</th>
           <th>Condition</th>
-          <th>Rain (%)</th>
+          <th>Rain (%)</th> 
           <th>Wind (km/h)</th>
         </tr>
   `;
   
-  // Loop through only the first 240 hours
+  // Loop through all 240 hours
   for (let i = 0; i < 240; i++) {
     const date = new Date(hourly.time[i]);
     const timeString = date.toLocaleTimeString("en-GB", { weekday: "short", hour: '2-digit', minute: '2-digit' });
@@ -106,7 +109,9 @@ function renderHourly(hourly) {
         <td><strong>${timeString}</strong></td>
         <td>${hourly.temperature_2m[i]}°</td>
         <td>${emoji(hourly.weathercode[i])}</td>
-        <td>${hourly.precipitation_probability_max[i]}%</td>
+        
+        <td>${hourly.precipitation_probability[i]}%</td> 
+
         <td>${hourly.wind_speed_10m[i]}</td>
       </tr>
     `;
