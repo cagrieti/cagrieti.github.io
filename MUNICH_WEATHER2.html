@@ -96,7 +96,7 @@ function renderHourly(hourly) {
   `;
   
   // Loop through only the first 24 hours
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 240; i++) {
     const date = new Date(hourly.time[i]);
     const timeString = date.toLocaleTimeString("en-GB", { weekday: "short", hour: '2-digit', minute: '2-digit' });
 
