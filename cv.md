@@ -5,7 +5,7 @@ title: "CV"
 
 # Curriculum Vitae
 
-📄 You can [download my CV here](CV.pdf).
+📄 You can [download my CV here](cv_eti.pdf).
 
 
 ## Education
